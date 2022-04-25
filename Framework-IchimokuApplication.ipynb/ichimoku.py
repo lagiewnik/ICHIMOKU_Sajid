@@ -1,4 +1,5 @@
 import json
+from math import fabs
 
 tenkan_period = 9
 kijun_period = 26
@@ -143,18 +144,20 @@ def kumo_color(df):
 
 
 
-def cross_tenkan_kijun_vs_kumo(df):
+def cross_tenkan_kijun_vs_kumo(df, cross="cross_tenkan_kijun", tenkan = "tenkan_sen", kijun = 'kijun_sen'):
     """TODO"""
-
+    df['cross_tk_vs_kumo']=0
     # function crossVSKumo(k, k_prev, t, t_prev, sA, sA_prev, sB, sB_prev) {
     # // zwraca 0 gdy nie było przecięcie, zwraca 2 gdy przecięcie nad, -2 pod chmurą, 1 w chmurze
     fake_x0 = 0
     fake_x1 = 1
     
-
+    # warunek-nie było przeciecia-zwroc 0
+    no_cross = fabs(df[cross])<2
+    df.loc[no_cross, 'cross_tk_vs_kumo'] = 0
     # //Wyznacz współczynniki a i b równania y = ax + b  linii k i t 
-    k_eq = calcFactorStraight(fake_x0, fake_x1, k_prev, k)
-    t_eq = calcFactorStraight(fake_x0, fake_x1, t_prev, t)
+    k_eq = calcFactorStraight(fake_x0, fake_x1, df[kijun].shift(1), df[kijun])
+    t_eq = calcFactorStraight(fake_x0, fake_x1, df[tenkan].shift(1), df[tenkan])
     # // x = (b1 - b2)/(a2 - a1);
     # // y = (a2 * b1 - b2 * a1) / (a2 - a1);
     # //wyznacz punkt przeciecia k i t
