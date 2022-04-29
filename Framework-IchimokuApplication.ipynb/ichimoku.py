@@ -31,14 +31,19 @@ def chikou_calc(df, close="Close"):
     df['chikou_span'] = df[close].shift(-chikou_shift)
 
 def ichimoku_calculate(df):
+    # calc ichimoku line
     tenkan_sen_calc(df)
     kijun_sen_calc(df)
     kumo_calc(df)
     chikou_calc(df)
+    # calc  point
     tenkan_vs_kijun(df)
     price_vs_kijun(df)
     kumo_color(df)
+    price_vs_kumo(df)
     s3line(df)
+    #cross_tenkan_kijun_vs_kumo(df)
+    chikou_vs_price(df)
 
 def tenkan_vs_kijun(df):
     """
@@ -120,7 +125,6 @@ def price_vs_kumo(df, close="Close", senkouA="senkou_span_a", senkouB="senkou_sp
     df.loc[price_in_kumo_prev & price_under_kumo, 'price_vs_kumo'] = -3
     df.loc[price_over_kumo_prev & price_under_kumo, 'price_vs_kumo'] = -4
 
-
 def kumo_color(df):
     """
         Return:
@@ -142,10 +146,14 @@ def kumo_color(df):
     df.loc[red_color_prev& red_color , 'kumo_color'] = -1
     df.loc[green_color_prev & red_color, 'kumo_color'] = -2
 
-
-
 def cross_tenkan_kijun_vs_kumo(df, cross="cross_tenkan_kijun", tenkan = "tenkan_sen", kijun = 'kijun_sen'):
-    """TODO"""
+    """
+    Zwraca:
+    0 - nie bylo przecięcia
+    1 - przecięcie w chmurze
+    2- przecięcie nad chmura
+    -2 - przecięcie pod chmura
+    """
     df['cross_tk_vs_kumo']=0
     # function crossVSKumo(k, k_prev, t, t_prev, sA, sA_prev, sB, sB_prev) {
     # // zwraca 0 gdy nie było przecięcie, zwraca 2 gdy przecięcie nad, -2 pod chmurą, 1 w chmurze
@@ -153,8 +161,8 @@ def cross_tenkan_kijun_vs_kumo(df, cross="cross_tenkan_kijun", tenkan = "tenkan_
     fake_x1 = 1
     
     # warunek-nie było przeciecia-zwroc 0
-    no_cross = fabs(df[cross])<2
-    df.loc[no_cross, 'cross_tk_vs_kumo'] = 0
+    is_cross = fabs(df['cross_tenkan_kijun'])>1
+    df.loc[is_cross, 'cross_tk_vs_kumo'] = 1
     # //Wyznacz współczynniki a i b równania y = ax + b  linii k i t 
     k_eq = calcFactorStraight(fake_x0, fake_x1, df[kijun].shift(1), df[kijun])
     t_eq = calcFactorStraight(fake_x0, fake_x1, df[tenkan].shift(1), df[tenkan])
@@ -172,13 +180,18 @@ def cross_tenkan_kijun_vs_kumo(df, cross="cross_tenkan_kijun", tenkan = "tenkan_
     sB_Y = sB_eq.a * cross_x + sB_eq.b
     # console.log("SA_Y: " + sA_Y)
     # console.log("SB_Y: " + sB_Y)
-    if (cross_y > sA_Y & cross_y > sB_Y) {
-        return 10
-    }
-    else if (cross_y < sA_Y & cross_y < sB_Y) {
-        return -10
-    }
-    else return 5
+    # conditional:
+    cross_over_kumo = (cross_y > sA_Y & cross_y > sB_Y)
+    cross_below_kumo = (cross_y > sA_Y & cross_y > sB_Y)
+    df.loc[cross_over_kumo, 'cross_tk_vs_kumo'] = 2
+    df.loc[cross_below_kumo, 'cross_tk_vs_kumo'] = -2
+    # if (cross_y > sA_Y & cross_y > sB_Y) {
+    #     return 10
+    # }
+    # else if (cross_y < sA_Y & cross_y < sB_Y) {
+    #     return -10
+    # }
+    # else return 5
 
 def calcFactorStraight(fake_x0, fake_x1, y0, y1): 
     # //wyznacza współczynniki rownania prostej y = ax + b
@@ -188,7 +201,6 @@ def calcFactorStraight(fake_x0, fake_x1, y0, y1):
     b = y0 - a*fake_x0
     
     return json.dumps({"a": a , "b": b })
-
 
 def chikou_vs_price(df, chikou_span="chikou_span", close="Close"):
     """
@@ -200,10 +212,6 @@ def chikou_vs_price(df, chikou_span="chikou_span", close="Close"):
     df['chikou_span_vs_price']=0
     chikou_over = df[chikou_span] > df[close].shift(chikou_shift)
     chikou_under = df[chikou_span] < df[close].shift(chikou_shift)
-
-
-
-
 
 def s3line(df, tenkan="tenkan_sen", kijun="kijun_sen", senkouA = "senkou_span_a" ):
     """TODO"""
@@ -219,9 +227,6 @@ def s3line(df, tenkan="tenkan_sen", kijun="kijun_sen", senkouA = "senkou_span_a"
     df.loc[s3_up & ~(s3_up_prev) ,'s3line']= 2
     df.loc[s3_down & s3_down_prev ,'s3line']= -1
     df.loc[s3_down & ~(s3_down_prev) ,'s3line']= -2
-
-
-
 
 def test():
     print("TEST")
